@@ -40,11 +40,11 @@
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
     "end", "false", "for", "function", "goto", "if",
-    "in", "local", "nil", "not", "or", "repeat",
+    "in", "var", "null", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
-    "<number>", "<integer>", "<name>", "<string>"
+    "<number>", "<integer>", "<name>", "<string>", "->"
 };
 
 
@@ -440,6 +440,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '-': {  /* '-' or '--' (comment) */
         next(ls);
+        if (ls->current == '>') {
+          next(ls);
+          return TK_ARROW;
+        }
         if (ls->current != '-') return '-';
         /* else is a comment */
         next(ls);
@@ -484,15 +488,32 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         else if (check_next1(ls, '>')) return TK_SHR;
         else return '>';
       }
+      case '\\': {
+        next(ls);
+        return TK_IDIV;
+      }
       case '/': {
         next(ls);
-        if (check_next1(ls, '/')) return TK_IDIV;
-        else return '/';
+        if (ls->current == '/') {
+          // c-style short comment
+          while (!currIsNewline(ls) && ls->current != EOZ)
+            next(ls);  /* skip until end of line (or end of file) */
+          break;
+        } else if (ls->current == '*') {
+          /* else is a comment */
+          next(ls);
+          while (ls->current != '*' || !check_next1(ls, '/')) {
+            if (ls->current == EOZ) break;
+            next(ls);  /* skip until end of line (or end of file) */
+          }
+          break;
+        }
+        return '/';
       }
-      case '~': {
+      case '!': {
         next(ls);
         if (check_next1(ls, '=')) return TK_NE;
-        else return '~';
+        else return '!';
       }
       case ':': {
         next(ls);
