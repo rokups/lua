@@ -502,8 +502,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         } else if (ls->current == '*') {
           /* else is a comment */
           next(ls);
-          while (ls->current != '*' || !check_next1(ls, '/')) {
-            if (ls->current == EOZ) break;
+          while (ls->current != EOZ) {
+            if (check_next1(ls, '*') && check_next1(ls, '/')) {
+              break;
+            }
             next(ls);  /* skip until end of line (or end of file) */
           }
           break;
